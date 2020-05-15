@@ -14,7 +14,7 @@ const workers: Workers = {
 }
 
 export const tasks = functions.runWith({memory: '2GB'}).pubsub
-.schedule('0 * * * *').onRun(async context => {
+.schedule('0 * * * *').onRun(async (context:any) => {
     const now = timestamp;
     const query = db.collection('tasks').where('performAt', '<=', now).where('status', '==', 'scheduled');
     const queue = await query.get();
@@ -22,7 +22,7 @@ export const tasks = functions.runWith({memory: '2GB'}).pubsub
 
     console.log({now, queue});
 
-    queue.forEach(doc => {
+    queue.forEach((doc:any) => {
         const { worker, options } = doc.data();
         
         const job = workers[worker](options)
