@@ -1,0 +1,3 @@
+tasks:
+  - before: npm i -g firebase-tools
+  - before: cd functions && npm install
