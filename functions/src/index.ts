@@ -21,6 +21,7 @@ export const tasks = functions.runWith({memory: '2GB'}).pubsub
     const jobs: Promise<any>[] = [];
 
     console.log({now, queue});
+    console.log('Puppeteer added');
 
     queue.forEach((doc:any) => {
         const { worker, options } = doc.data();
