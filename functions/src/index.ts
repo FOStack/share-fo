@@ -1,4 +1,5 @@
 import * as functions from 'firebase-functions';
+import * as puppeteer from 'puppeteer';
 
 import { 
     db,
@@ -32,6 +33,20 @@ export const tasks = functions.runWith({memory: '2GB'}).pubsub
 
         jobs.push(job);
     });
+
+    let browser = await puppeteer.launch({
+        args: ['--no-sandbox']
+    });
+
+    try {
+        const page = await browser.newPage();
+        await page.goto('https://homefry.app/', {waitUntil: 'networkidle2'});
+        const buffer = await page.screenshot({fullPage: true});
+        console.log(buffer);
+        // res.type('image/png').send(buffer);
+    } catch (e) {
+        // res.status(500).send(e.toString());
+    }
 
     return await Promise.all(jobs);
 });
