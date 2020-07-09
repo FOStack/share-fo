@@ -1,4 +1,6 @@
 import * as functions from 'firebase-functions';
+import * as puppeteer from 'puppeteer';
+import * as fb from './modules/facebook';
 
 import { 
     db,
@@ -9,7 +11,7 @@ interface Workers {
     [key: string]: (options: any) => Promise<any>
 }
 
-const workers: Workers = {
+const perform: Workers = {
     log: () => db.collection('logs').add({ hello: 'Howdy!'})
 }
 
@@ -25,12 +27,37 @@ export const tasks = functions.runWith({memory: '2GB'}).pubsub
     queue.forEach(doc => {
         const { worker, options } = doc.data();
         
-        const job = workers[worker](options)
+        const job = perform[worker](options)
                     .then(() => doc.ref.update({status: 'complete'}))
                     .catch((err) => doc.ref.update({status: 'error'}));
 
         jobs.push(job);
     });
 
+    fb.get();
+
     return await Promise.all(jobs);
+});
+
+
+
+const getContent = async () => {
+    const browser = await puppeteer.launch({headless: true});
+    const page = await browser.newPage();
+
+    await page.goto('https://homefry.web.app/');
+
+    let img:any = null;
+    img = await page.screenshot({path: '1.png'});
+    console.log(img);
+};
+
+export const scrape = functions.runWith({memory: '1GB'}).pubsub
+.schedule('0 */3 * * *').onRun(async context => {
+    try {
+        await getContent();
+        return true;
+    } catch (e) {
+        return e;
+    }
 });
