@@ -51,7 +51,7 @@ const getContent = async () => {
 
     await page.type('input.gLFyf.gsfi', 'after:2020-01-01 site:twitter.com inurl:status *food *order');
 
-    page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
 
     await page.waitFor(2000);
 
@@ -67,7 +67,7 @@ const getContent = async () => {
 
     const img:any = await page.screenshot({path: '1.png'});
     
-    db.collection('screenshots').add(img);
+    return db.collection('screenshots').add(img);
 };
 
 
