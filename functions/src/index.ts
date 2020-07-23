@@ -4,11 +4,23 @@ import * as puppeteer from 'puppeteer';
 
 import { 
     db,
-    timestamp
+    timestamp,
+    // storage
 } from './modules/admin';
 
 interface Workers {
     [key: string]: (options: any) => Promise<any>
+}
+
+// function paragraph(c:any, n:any) {
+//     return c + n;
+// }
+
+function sources(c:any, v:any) {
+    if(v.src.includes('media')) {
+        c.push(v.src);
+    }
+    return c;
 }
 
 const perform: Workers = {
@@ -17,19 +29,21 @@ const perform: Workers = {
 
 export const tasks = functions.runWith({memory: '2GB'}).pubsub
 .schedule('0 0 * * *').onRun(async context => {
+    console.log(context);
     const now = timestamp;
     const query = db.collection('tasks').where('performAt', '<=', now).where('status', '==', 'scheduled');
     const queue = await query.get();
     const jobs: Promise<any>[] = [];
-
-    console.log({now, queue});
 
     queue.forEach(doc => {
         const { worker, options } = doc.data();
         
         const job = perform[worker](options)
                     .then(() => doc.ref.update({status: 'complete'}))
-                    .catch((err) => doc.ref.update({status: 'error'}));
+                    .catch(async (err) => {
+                        console.log({now, queue, err});
+                        await doc.ref.update({status: 'error'})
+                    });
 
         jobs.push(job);
     });
@@ -49,7 +63,9 @@ const getContent = async () => {
 
     await page.goto('https://google.com');
 
-    await page.type('input.gLFyf.gsfi', 'after:2020-01-01 site:twitter.com inurl:status *food *order');
+    await page.type('input.gLFyf.gsfi', 
+    'after:2020-05-01 site:twitter.com inurl:status ~food ~order'
+    );
 
     await page.keyboard.press('Enter');
 
@@ -59,25 +75,43 @@ const getContent = async () => {
                 
     const links = await page.$$('div.r');
     
-    const i = Math.floor((Math.random() * links.length) + 1);
+    const i = Math.floor(Math.random() * links.length);
     
     await links[i].click();
 
     await page.waitFor(5000);
 
-    const img:any = await page.screenshot({path: '1.png'});
+    const data = await page.evaluate(() => {
+        
+        const images = document.querySelectorAll('img');
+        const text = document.querySelector('div.css-901oao');
+
+        const info = {
+            images: Array.from(images).reduce(sources, []),
+            text: text?.textContent
+        }
+
+        return info;
+    });
+
+    // if(data.images.length > 0){
+    // }
+    await db.collection('tweets').add(data);
+
+    await browser.close();
     
-    return db.collection('screenshots').add(img);
+    return "complete";
 };
 
 
 
-export const scrape = functions.runWith({memory: '1GB'}).pubsub
+export const scrape = functions.runWith({memory: '2GB'}).pubsub
 .schedule('*/10 * * * *').onRun(async context => {
     try {
         await getContent();
         return true;
     } catch (e) {
+        console.log(JSON.stringify({e, context}));
         return e;
     }
 });
