@@ -111,7 +111,7 @@ export const scrape = functions.runWith({memory: '2GB'}).pubsub
         await getContent();
         return true;
     } catch (e) {
-        console.log(JSON.stringify({e, context}));
+        console.log(JSON.stringify({e, eventType: context.eventType}));
         return e;
     }
 });
