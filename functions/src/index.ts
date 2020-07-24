@@ -94,37 +94,31 @@ const getContent = async () => {
 
     await page.waitFor(5000);
 
-    const post = await page.$eval(
-    'div.css-901oao.r-jwli3a.r-1qd0xha.r-a023e6.r-16dba41.r-ad9z0x.r-bcqeeo.r-bnwqim.r-qvutc0 span.css-901oao.css-16my406.r-1qd0xha.r-ad9z0x.r-bcqeeo.r-qvutc0', e => e.innerHTML
-    );
+    const data = await page.evaluate(() => {
 
-    // const text = await page.evaluate((p:any) => p.contentText, post);
-
-    // const data = await page.evaluate(() => {
-
-    //     // function sources(c:any, v:any) {
-    //     //     if(v.src.includes('media')) {
-    //     //         c.push(v.src);
-    //     //     }
-    //     //     return c;
-    //     // }
+        // function sources(c:any, v:any) {
+        //     if(v.src.includes('media')) {
+        //         c.push(v.src);
+        //     }
+        //     return c;
+        // }
         
-    //     const images = document.querySelectorAll('img');
-    //     const text = document.querySelector(
-    //     'div.css-901oao.r-jwli3a.r-1qd0xha.r-a023e6.r-16dba41.r-ad9z0x.r-bcqeeo.r-bnwqim.r-qvutc0 span.css-901oao.css-16my406.r-1qd0xha.r-ad9z0x.r-bcqeeo.r-qvutc0'
-    //     );
+        const images = document.querySelectorAll('img');
+        const text = document.querySelector(
+        'div.css-901oao.r-jwli3a.r-1qd0xha.r-a023e6.r-16dba41.r-ad9z0x.r-bcqeeo.r-bnwqim.r-qvutc0 span.css-901oao.css-16my406.r-1qd0xha.r-ad9z0x.r-bcqeeo.r-qvutc0'
+        );
 
-    //     return {
-    //         images: Array.from(images).map(v => v.src),
-    //         text: text||'Couldn\'t scrape'
-    //     }
-    // });
+        return {
+            images: Array.from(images).map(v => v.src),
+            text: text||'Couldn\'t scrape'
+        }
+    });
 
     await page.close();
 
     await browser.close();
     
-    return {text: post};
+    return data;
 };
 
 
