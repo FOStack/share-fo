@@ -16,13 +16,6 @@ interface Workers {
 //     return c + n;
 // }
 
-function sources(c:any, v:any) {
-    if(v.src.includes('media')) {
-        c.push(v.src);
-    }
-    return c;
-}
-
 const perform: Workers = {
     log: () => db.collection('logs').add({ hello: 'Howdy!'})
 }
@@ -57,7 +50,22 @@ export const tasks = functions.runWith({memory: '2GB'}).pubsub
 
 const getContent = async () => {
     
-    const browser = await puppeteer.launch({headless: true});
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--disable-gpu',
+        //   '--disable-dev-shm-usage',
+          '--disable-setuid-sandbox',
+          '--timeout=30000',
+        //   '--no-first-run',
+          '--no-sandbox',
+          '--no-zygote',
+          '--single-process',
+        //   "--proxy-server='direct://'",
+        //   '--proxy-bypass-list=*',
+          '--deterministic-fetch',
+        ],
+    });
     
     const page = await browser.newPage();
 
@@ -69,49 +77,67 @@ const getContent = async () => {
 
     await page.keyboard.press('Enter');
 
-    await page.waitFor(2000);
-
-    // await page.waitForSelector('div#resultStats');
+    await page.waitFor(5000);
                 
     const links = await page.$$('div.r');
+
+    await page.waitFor(1000);
     
-    const i = Math.floor(Math.random() * links.length);
+    const i = Math.floor(Math.random() * (links.length - 1));
     
-    await links[i].click();
+    const url = await links[i].$eval('a', e => e.getAttribute('href'));
+    
+    if(!url)
+    return {index: i};
+
+    await page.goto(url);
 
     await page.waitFor(5000);
 
-    const data = await page.evaluate(() => {
+    const post = await page.$eval(
+    'div.css-901oao.r-jwli3a.r-1qd0xha.r-a023e6.r-16dba41.r-ad9z0x.r-bcqeeo.r-bnwqim.r-qvutc0 span.css-901oao.css-16my406.r-1qd0xha.r-ad9z0x.r-bcqeeo.r-qvutc0', e => e.innerHTML
+    );
+
+    // const text = await page.evaluate((p:any) => p.contentText, post);
+
+    // const data = await page.evaluate(() => {
+
+    //     // function sources(c:any, v:any) {
+    //     //     if(v.src.includes('media')) {
+    //     //         c.push(v.src);
+    //     //     }
+    //     //     return c;
+    //     // }
         
-        const images = document.querySelectorAll('img');
-        const text = document.querySelector('div.css-901oao');
+    //     const images = document.querySelectorAll('img');
+    //     const text = document.querySelector(
+    //     'div.css-901oao.r-jwli3a.r-1qd0xha.r-a023e6.r-16dba41.r-ad9z0x.r-bcqeeo.r-bnwqim.r-qvutc0 span.css-901oao.css-16my406.r-1qd0xha.r-ad9z0x.r-bcqeeo.r-qvutc0'
+    //     );
 
-        const info = {
-            images: Array.from(images).reduce(sources, []),
-            text: text?.textContent
-        }
+    //     return {
+    //         images: Array.from(images).map(v => v.src),
+    //         text: text||'Couldn\'t scrape'
+    //     }
+    // });
 
-        return info;
-    });
-
-    // if(data.images.length > 0){
-    // }
-    await db.collection('tweets').add(data);
+    await page.close();
 
     await browser.close();
     
-    return "complete";
+    return {text: post};
 };
 
 
 
-export const scrape = functions.runWith({memory: '2GB'}).pubsub
-.schedule('*/10 * * * *').onRun(async context => {
-    try {
-        await getContent();
+export const scrape = functions.runWith({memory: '2GB', timeoutSeconds: 540}).pubsub
+.schedule('0 * * * *').onRun(async (/*context*/) => {
+    // try {
+        const data = await getContent();
+        // console.log({data, eventType: context.eventType});
+        await db.collection('tweets').add(data);
         return true;
-    } catch (e) {
-        console.log(JSON.stringify({e, eventType: context.eventType}));
-        return e;
-    }
+    // } catch (e) {
+    //     console.log(JSON.stringify({message:e.message, eventType: context.eventType}));
+    //     return e;
+    // }
 });
